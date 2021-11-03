@@ -1,5 +1,44 @@
 from random import Random
 from board import Direction, Rotation, Action
+from board import Shape
+
+
+
+shape_to_cells = {
+    Shape.I: {
+        (0, 0),
+        (0, 1),
+        (0, 2),
+        (0, 3),
+    },
+    Shape.J: {
+                (1, 0),
+                (1, 1),
+        (0, 2), (1, 2), # noqa
+    },
+    Shape.L: {
+        (0, 0),
+        (0, 1),
+        (0, 2), (1, 2),
+    },
+    Shape.O: {
+        (0, 0), (1, 0),
+        (0, 1), (1, 1),
+    },
+    Shape.S: {
+                (1, 0), (2, 0),
+        (0, 1), (1, 1),
+    },
+    Shape.T: {
+        (0, 0), (1, 0), (2, 0),
+                (1, 1),
+    },
+    Shape.Z: {
+        (0, 0), (1, 0),
+                (1, 1), (2, 1),
+    },
+    Shape.B: { (0,0)}
+}
 
 
 class Player:
@@ -13,7 +52,6 @@ class RandomPlayer(Player):
         self.random = Random(seed)
 
     def choose_action(self, board):
-        print (board.falling.shape)
         if self.random.random() > 0.97:
             # 3% chance we'll discard or drop a bomb
             return self.random.choice([
@@ -118,6 +156,11 @@ def moveHorizontally(sandbox, previousMoves, direction, shifts):
     
     return newSandbox, moves
 
+def addShapeToBoard(secondSandbox, shape):
+    secondSandbox.falling = True
+    secondSandbox.falling.shape = shape
+    secondSandbox.falling.cells = shape_to_cells[shape]
+    return secondSandbox.clone()
 
 def findHorizontalMoves(sandbox, previousMoves):
     
@@ -129,16 +172,27 @@ def findHorizontalMoves(sandbox, previousMoves):
 
     for move in range(0, leftmoves):
         movedSandbox, moves = moveHorizontally(sandbox, previousMoves, Direction.Left, move)
+        newSandboxScore = 0
         
-        newSandboxScore = evalBoard(movedSandbox)
+        if sandbox.next is not None:
+            newBoard = movedSandbox.clone()
+            newSandboxScore += chooseBestMove(newBoard)[1]
+ 
+        newSandboxScore += evalBoard(movedSandbox)
         if (newSandboxScore > bestScore):
             bestAction = moves.copy()
             bestScore = newSandboxScore
 
     for move in range(0,rightmoves):
         movedSandbox, moves = moveHorizontally(sandbox, previousMoves, Direction.Right, move)
+        newSandboxScore = 0
         
-        newSandboxScore = evalBoard(movedSandbox)
+        if sandbox.next is not None:
+            newBoard = movedSandbox.clone()
+            newSandboxScore += chooseBestMove(newBoard)[1]
+
+        newSandboxScore += evalBoard(movedSandbox)
+
         if (newSandboxScore > bestScore):
             bestAction = moves.copy()
             bestScore = newSandboxScore
@@ -146,12 +200,16 @@ def findHorizontalMoves(sandbox, previousMoves):
     ##Neither right or lef, just drop centrally
     moves = previousMoves.copy()
     movedSandbox = sandbox.clone()
-   
+    newSandboxScore = 0
     if movedSandbox.falling:
         movedSandbox.move(Direction.Drop)
         moves.append(Direction.Drop)
-
-    newSandboxScore = evalBoard(movedSandbox)
+    
+    if sandbox.next is not None:
+        newBoard = movedSandbox.clone()
+        newSandboxScore += chooseBestMove(newBoard)[1]
+    
+    newSandboxScore += evalBoard(movedSandbox)
     if (newSandboxScore > bestScore):
         bestAction = moves.copy()
         bestScore = newSandboxScore
@@ -180,6 +238,31 @@ def someDirection(list, move):
     l.append(move)
     return l
 
+def chooseBestMove(sandbox_original):
+    bestScore = -1000000
+    bestAction = []
+    
+    for rotation in range(0,4):
+        sandbox = sandbox_original.clone()
+        
+        actions = []
+        if rotation == 1:
+            sandbox.rotate(Rotation.Clockwise)
+            actions.append(Rotation.Clockwise)
+        if rotation == 2:
+            sandbox.rotate(Rotation.Clockwise)
+            sandbox.rotate(Rotation.Clockwise)
+            actions.append(Rotation.Clockwise)
+            actions.append(Rotation.Clockwise)
+        if rotation == 3:
+            sandbox.rotate(Rotation.Anticlockwise)
+            actions.append(Rotation.Anticlockwise)
+        
+        score, totalActions = findHorizontalMoves(sandbox, actions)
+        if score > bestScore:
+            bestAction = totalActions.copy()
+            bestScore = score
+    return bestAction, bestScore
 
 class MichaelsPlayer(Player):
 
@@ -187,30 +270,11 @@ class MichaelsPlayer(Player):
         self.random = Random(seed)
     
     def choose_action(self, board):
+        bestMove = chooseBestMove(board)[0]
         
-        bestScore = -1000000
-        bestAction = []
+        return bestMove
         
-        for rotation in range(0,4):
-            sandbox = board.clone()
-            
-            actions = []
-            if rotation == 1:
-                sandbox.rotate(Rotation.Clockwise)
-                actions.append(Rotation.Clockwise)
-            if rotation == 2:
-                sandbox.rotate(Rotation.Clockwise)
-                sandbox.rotate(Rotation.Clockwise)
-                actions.append(Rotation.Clockwise)
-                actions.append(Rotation.Clockwise)
-            if rotation == 3:
-                sandbox.rotate(Rotation.Anticlockwise)
-                actions.append(Rotation.Anticlockwise)
-            
-            score, totalActions = findHorizontalMoves(sandbox, actions)
-            if score > bestScore:
-                bestAction = totalActions.copy()
 
-        return bestAction
+        
         
 SelectedPlayer = MichaelsPlayer
