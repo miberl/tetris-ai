@@ -2,6 +2,8 @@ from random import Random
 from board import Direction, Rotation, Action
 from board import Shape
 
+import time
+
 
 
 shape_to_cells = {
@@ -82,8 +84,6 @@ class RandomPlayer(Player):
 
 
 
-
-
 #Returns a score for a board
 def hisHolyness(sandbox):
     holes = 0
@@ -111,12 +111,31 @@ def columnHeight(sandbox, x):
     return height
 
 
-#Maybe only over 3?
+#Maybe allow one bump of 4 blocks 
 def hisBumpiness(sandbox):
     bumpy = 0
     for x in range(sandbox.width-1):
         bumpy += abs(columnHeight(sandbox, x)-columnHeight(sandbox, x+1))
     return bumpy
+
+
+def sweet1600(sandbox):
+    difnum = 0
+    diff = columnHeight(sandbox, 1) -columnHeight(sandbox, 0)
+    if diff> 3and diff<4:
+        return 1
+    return 0
+    
+#Probably not useful
+def coverUpTetris(sandbox):
+    holes = 0
+    for y in range (sandbox.height):
+        if (0,y) not in sandbox.cells:
+            for upperYs in range(0,y):
+                if (0, upperYs) in sandbox.cells:
+                    holes+=1
+    return holes
+
 
 
 def completedLines(sandbox):
@@ -130,17 +149,32 @@ def completedLines(sandbox):
         if allComplete:
             linesCompleted +=1
     return linesCompleted
-#Heuristics taken from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
+
 
 def evalBoard(sandbox):
-    score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * completedLines(sandbox) -0.184483*hisBumpiness(sandbox)
+    #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * completedLines(sandbox) -0.184483*hisBumpiness(sandbox)
+    #Penalise moves that cover up a hole on the edges without doing a tetris
+    #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * ((completedLines(sandbox)-2)**completedLines(sandbox)) -0.184483*hisBumpiness(sandbox)
+    #These heuristics have been taken from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
+    score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * ((completedLines(sandbox)-2)**completedLines(sandbox)) -0.184483*hisBumpiness(sandbox)
+    
+    ''' 20.000 score''' 
+    '''
+    completed = completedLines(sandbox)
+    if completed >= 4:
+        completed = 1000
+    else:
+        completed = 0
+    score = -2*hisHolyness(sandbox) - 0.2* hisHighNess(sandbox) +1.3 * completed -0.18*hisBumpiness(sandbox)
+    '''
+
+    #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * ((completedLines(sandbox))*(4**(completedLines(sandbox)-1))) -0.184483*hisBumpiness(sandbox) 
+    #print(score)
+    
     return score
 
 
-
-
 def moveHorizontally(sandbox, previousMoves, direction, shifts):
-
     moves = previousMoves.copy()
     newSandbox = sandbox.clone()
     ret = None
@@ -156,63 +190,62 @@ def moveHorizontally(sandbox, previousMoves, direction, shifts):
     
     return newSandbox, moves
 
-def addShapeToBoard(secondSandbox, shape):
-    secondSandbox.falling = True
-    secondSandbox.falling.shape = shape
-    secondSandbox.falling.cells = shape_to_cells[shape]
-    return secondSandbox.clone()
 
 def findHorizontalMoves(sandbox, previousMoves):
-    
-    leftmoves = distanceFrom0X(sandbox)
-    rightmoves = 10-findPieceWidth(sandbox) - leftmoves
-    
     bestAction = []
     bestScore = -1000000
 
-    for move in range(0, leftmoves):
-        movedSandbox, moves = moveHorizontally(sandbox, previousMoves, Direction.Left, move)
+    if sandbox.falling is not None:
+        leftmoves = distanceFrom0X(sandbox)
+        rightmoves = 10-findPieceWidth(sandbox) - leftmoves
+        
+        
+
+        for move in range(0, leftmoves):
+            movedSandbox, moves = moveHorizontally(sandbox, previousMoves, Direction.Left, move)
+            newSandboxScore = 0
+            
+            if sandbox.next is not None:
+                newBoard = movedSandbox.clone()
+                newSandboxScore += chooseBestMove(newBoard)[1]
+    
+            newSandboxScore += evalBoard(movedSandbox)
+            if (newSandboxScore > bestScore):
+                bestAction = moves.copy()
+                bestScore = newSandboxScore
+                
+                
+
+        for move in range(0,rightmoves):
+            movedSandbox, moves = moveHorizontally(sandbox, previousMoves, Direction.Right, move)
+            newSandboxScore = 0
+            
+            if sandbox.next is not None:
+                newBoard = movedSandbox.clone()
+                newSandboxScore += chooseBestMove(newBoard)[1]
+
+            newSandboxScore += evalBoard(movedSandbox)
+
+            if (newSandboxScore > bestScore):
+                bestAction = moves.copy()
+                bestScore = newSandboxScore
+
+        ##Neither right or lef, just drop centrally
+        moves = previousMoves.copy()
+        movedSandbox = sandbox.clone()
         newSandboxScore = 0
+        if movedSandbox.falling:
+            movedSandbox.move(Direction.Drop)
+            moves.append(Direction.Drop)
         
         if sandbox.next is not None:
             newBoard = movedSandbox.clone()
             newSandboxScore += chooseBestMove(newBoard)[1]
- 
         newSandboxScore += evalBoard(movedSandbox)
-        if (newSandboxScore > bestScore):
-            bestAction = moves.copy()
-            bestScore = newSandboxScore
-
-    for move in range(0,rightmoves):
-        movedSandbox, moves = moveHorizontally(sandbox, previousMoves, Direction.Right, move)
-        newSandboxScore = 0
         
-        if sandbox.next is not None:
-            newBoard = movedSandbox.clone()
-            newSandboxScore += chooseBestMove(newBoard)[1]
-
-        newSandboxScore += evalBoard(movedSandbox)
-
         if (newSandboxScore > bestScore):
             bestAction = moves.copy()
             bestScore = newSandboxScore
-
-    ##Neither right or lef, just drop centrally
-    moves = previousMoves.copy()
-    movedSandbox = sandbox.clone()
-    newSandboxScore = 0
-    if movedSandbox.falling:
-        movedSandbox.move(Direction.Drop)
-        moves.append(Direction.Drop)
-    
-    if sandbox.next is not None:
-        newBoard = movedSandbox.clone()
-        newSandboxScore += chooseBestMove(newBoard)[1]
-    
-    newSandboxScore += evalBoard(movedSandbox)
-    if (newSandboxScore > bestScore):
-        bestAction = moves.copy()
-        bestScore = newSandboxScore
 
     return bestScore, bestAction
 
@@ -242,39 +275,51 @@ def chooseBestMove(sandbox_original):
     bestScore = -1000000
     bestAction = []
     
-    for rotation in range(0,4):
-        sandbox = sandbox_original.clone()
-        
-        actions = []
-        if rotation == 1:
-            sandbox.rotate(Rotation.Clockwise)
-            actions.append(Rotation.Clockwise)
-        if rotation == 2:
-            sandbox.rotate(Rotation.Clockwise)
-            sandbox.rotate(Rotation.Clockwise)
-            actions.append(Rotation.Clockwise)
-            actions.append(Rotation.Clockwise)
-        if rotation == 3:
-            sandbox.rotate(Rotation.Anticlockwise)
-            actions.append(Rotation.Anticlockwise)
-        
-        score, totalActions = findHorizontalMoves(sandbox, actions)
-        if score > bestScore:
-            bestAction = totalActions.copy()
-            bestScore = score
+    if sandbox_original.falling is not None:
+        for rotation in range(0,4):
+            sandbox = sandbox_original.clone()
+            if sandbox.falling is not None:
+                actions = []
+                if rotation == 1:
+                    try:
+                        sandbox.rotate(Rotation.Clockwise)
+                    except:
+                        print("Rotation except")
+                    actions.append(Rotation.Clockwise)
+                if rotation == 2:
+                    try:
+                        sandbox.rotate(Rotation.Clockwise)
+                        sandbox.rotate(Rotation.Clockwise)
+                    except:
+                        print("Rotation except")
+                    actions.append(Rotation.Clockwise)
+                    actions.append(Rotation.Clockwise)
+                if rotation == 3:
+                    try:
+                        sandbox.rotate(Rotation.Anticlockwise)
+                    except:
+                        print("Rotation except")
+                    actions.append(Rotation.Anticlockwise)
+            
+            score, totalActions = findHorizontalMoves(sandbox, actions)
+            if score > bestScore:
+                bestAction = totalActions.copy()
+                bestScore = score
     return bestAction, bestScore
+
 
 class MichaelsPlayer(Player):
 
     def __init__(self, seed=None):
         self.random = Random(seed)
+
     
     def choose_action(self, board):
         bestMove = chooseBestMove(board)[0]
-        
+     
         return bestMove
         
 
-        
+    
         
 SelectedPlayer = MichaelsPlayer
