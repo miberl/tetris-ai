@@ -142,18 +142,19 @@ def evalBoard(sandbox):
     bumps = hisBumpiness(sandbox)
     tetris = Tetris(sandbox, completedline)
     righMostLine = freeRightMostLine(sandbox)
-    #bigBlock = bigContinuousBlock(sandbox, holes, height)
+    bigBlock = bigContinuousBlock(sandbox, holes, height)
     maximumColumnHeight = maxLineHeight(sandbox)
+
 
 
     #Tetris Coefficients 
     holeCoeff = -4.9
     heightCoeff = -0.001
     onetothreeCoeff = -0.4
-    #Changed from -0.05
     bumpsCoeff = -0.01
     tetrisCoeff = 1000
-    rightMostCoeff = -0.4
+    rightMost = -0.4
+
 
     
     #Old coefficients Coefficients 
@@ -162,7 +163,37 @@ def evalBoard(sandbox):
         return -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +tetris*100+0.760666 * realCompletedLines(sandbox) -0.184483*hisBumpiness(sandbox)
 
 
-    score = +holeCoeff*holes +heightCoeff* height +onetothreeCoeff* onetothreelines +bumpsCoeff*bumps +tetrisCoeff*tetris +rightMostCoeff* righMostLine #+ 0.99* bigBlock
+
+    score = +holeCoeff*holes +heightCoeff* height +onetothreeCoeff* onetothreelines +bumpsCoeff*bumps +tetrisCoeff*tetris +rightMost* righMostLine #+ 0.99* bigBlock
+#    score = -10.017716*holes -0.60438914* height -20.0983829* onetothreelines -0.0250138*bumps +80.484989*tetris -8.97809041*righMostLine + 0.99* bigBlock
+    '''
+    score = +holeCoeff*holes +heightCoeff* height +onetothreeCoeff* onetothreelines +bumpsCoeff*bumps +tetrisCoeff*tetris +rightMost* righMostLine #+ 0.99* bigBlock
+    
+    #Tetris Coefficients 
+    holeCoeff = -100
+    heightCoeff = -0.5
+    onetothreeCoeff = -20000
+    bumpsCoeff = -5
+    tetrisCoeff = 150
+    rightMost = -100
+    
+    score = holeCoeff*holes +heightCoeff* height +onetothreeCoeff* onetothreelines +bumpsCoeff*bumps +tetrisCoeff*tetris +rightMost* righMostLine #+ 0.99* bigBlock
+    '''
+    #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * realCompletedLines(sandbox) -0.184483*hisBumpiness(sandbox)
+    #score =  -0.47809041*freeRightMostLine(sandbox)
+    #Penalise moves that cover up a hole on the edges without doing a tetris
+    ##These heuristics have been taken from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
+   # score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * ((completedLines(sandbox)-2)**completedLines(sandbox)) -0.184483*hisBumpiness(sandbox)
+    
+    ''' 20.000 score''' 
+    '''
+    completed = completedLines(sandbox)
+    if completed >= 4:
+        completed = 1000
+    else:
+        completed = 0
+    score = -2*hisHolyness(sandbox) - 0.2* hisHighNess(sandbox) +1.3 * completed -0.18*hisBumpiness(sandbox)
+    '''
 
     #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * ((completedLines(sandbox))*(4**(completedLines(sandbox)-1))) -0.184483*hisBumpiness(sandbox) 
     #print(score)
@@ -277,7 +308,7 @@ def chooseBestMove(sandbox_original):
         if sandbox_original.falling.shape == Shape.O:
             rots = 1
         if sandbox_original.falling.shape == Shape.I:
-            rots=2
+            rots = 2
         for rotation in range(0,rots):
             sandbox = sandbox_original.clone()
             if sandbox.falling is not None:
@@ -319,45 +350,6 @@ class MichaelsPlayer(Player):
         self.testtwo = False
         
     def choose_action(self, board):
-
-                
-        if self.testtwo:
-            if board.next.shape == Shape.T:
-                if self.iterToTest == 1:
-                    self.testtwo = False
-                else:
-                    assert(False)
-            elif self.iterToTest == 5:
-                self.testtwo = False
-            else:
-                assert(False)
-
-
-        elif self.test:
-            if self.iterToTest in [3,4]:
-                shapes = [Shape.S, Shape.Z]
-                if board.falling.shape == shapes[self.iterToTest-3]:
-                    self.test = False
-                else:
-                    assert(False)
-            elif self.iterToTest == 2:
-                if board.falling.shape == Shape.J and board.next.shape == Shape.S:
-                    self.test = False
-                else:
-                    assert(False)
-            elif self.iterToTest in [1,5]:
-                if board.falling.shape == Shape.J and board.next.shape == Shape.Z:
-                    self.testtwo = True
-                    self.test = False
-                else:
-                    assert(False)
-            else:
-                assert(False)
-
-            
-
-
-
         
         bestMove = chooseBestMove(board)[0]
 

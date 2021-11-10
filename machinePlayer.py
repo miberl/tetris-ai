@@ -4,8 +4,13 @@ from board import Shape
 
 import time
 
+holeCoeff = 0
+heightCoeff = 0
+onetothreeCoeff = 0
+bumpsCoeff= 0
+tetrisCoeff = 0
+rightMostCoeff = 0
 
-run = 0
 
 class Player:
     def choose_action(self, board):
@@ -15,7 +20,7 @@ class Player:
 
 class RandomPlayer(Player):
     def __init__(self, seed=None):
-        self.random = Random(1)
+        self.random = Random(seed)
 
     def choose_action(self, board):
         if self.random.random() > 0.97:
@@ -87,11 +92,13 @@ def hisBumpiness(sandbox):
     return bumpy
 
 
+
 def Tetris(sandbox, complines):
     if complines >= 4:
         return 1 
     return 0
 
+    
 
 
 def realCompletedLines(sandbox):
@@ -119,6 +126,7 @@ def freeRightMostLine(sandbox):
         return 1
     else: 
         return 0
+
 def bigContinuousBlock(sandbox, holes, height):
     hol = holes
     if hol == 0 and height< 110:
@@ -133,8 +141,13 @@ def maxLineHeight(sandbox):
             maxHeight = hx
     return maxHeight
 
+
 def evalBoard(sandbox):
-    #Function results 
+    #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * completedLines(sandbox) -0.184483*hisBumpiness(sandbox)
+    #Penalise moves that cover up a hole on the edges without doing a tetris
+    #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * ((completedLines(sandbox)-2)**completedLines(sandbox)) -0.184483*hisBumpiness(sandbox)
+    #These heuristics have been taken from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
+    #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * ((completedLines(sandbox)-2)**completedLines(sandbox)) -0.184483*hisBumpiness(sandbox)
     holes = hisHolyness(sandbox)
     height = hisHighNess(sandbox)
     completedline = realCompletedLines(sandbox)
@@ -146,29 +159,14 @@ def evalBoard(sandbox):
     maximumColumnHeight = maxLineHeight(sandbox)
 
 
-    #Tetris Coefficients 
-    holeCoeff = -4.9
-    heightCoeff = -0.001
-    onetothreeCoeff = -0.4
-    #Changed from -0.05
-    bumpsCoeff = -0.01
-    tetrisCoeff = 1000
-    rightMostCoeff = -0.4
-
-    
-    #Old coefficients Coefficients 
 
     if maximumColumnHeight >= 12:
         return -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +tetris*100+0.760666 * realCompletedLines(sandbox) -0.184483*hisBumpiness(sandbox)
 
 
     score = +holeCoeff*holes +heightCoeff* height +onetothreeCoeff* onetothreelines +bumpsCoeff*bumps +tetrisCoeff*tetris +rightMostCoeff* righMostLine #+ 0.99* bigBlock
-
-    #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * ((completedLines(sandbox))*(4**(completedLines(sandbox)-1))) -0.184483*hisBumpiness(sandbox) 
-    #print(score)
     
     return score
-
 
 
 def moveHorizontally(sandbox, previousMoves, direction, shifts):
@@ -311,60 +309,22 @@ def chooseBestMove(sandbox_original):
 
 
 class MichaelsPlayer(Player):
-    def __init__(self, seed=None):
+    def __init__(self, candidate, seed=None):
         #Could initialise parameters from here?
         self.random = Random(seed)
-        self.iterToTest = 5
-        self.test = True 
-        self.testtwo = False
-        
+        global holeCoeff, heightCoeff, onetothreeCoeff, bumpsCoeff, tetrisCoeff, rightMostCoeff
+        holeCoeff = candidate.Holes
+        heightCoeff = candidate.AggrHeight
+        onetothreeCoeff = candidate.CompletedLines
+        bumpsCoeff= candidate.Bumpiness
+        tetrisCoeff = candidate.Tetris
+        rightMostCoeff = candidate.RightMost
+
     def choose_action(self, board):
-
-                
-        if self.testtwo:
-            if board.next.shape == Shape.T:
-                if self.iterToTest == 1:
-                    self.testtwo = False
-                else:
-                    assert(False)
-            elif self.iterToTest == 5:
-                self.testtwo = False
-            else:
-                assert(False)
-
-
-        elif self.test:
-            if self.iterToTest in [3,4]:
-                shapes = [Shape.S, Shape.Z]
-                if board.falling.shape == shapes[self.iterToTest-3]:
-                    self.test = False
-                else:
-                    assert(False)
-            elif self.iterToTest == 2:
-                if board.falling.shape == Shape.J and board.next.shape == Shape.S:
-                    self.test = False
-                else:
-                    assert(False)
-            elif self.iterToTest in [1,5]:
-                if board.falling.shape == Shape.J and board.next.shape == Shape.Z:
-                    self.testtwo = True
-                    self.test = False
-                else:
-                    assert(False)
-            else:
-                assert(False)
-
-            
-
-
-
-        
         bestMove = chooseBestMove(board)[0]
-
         return bestMove
         
 
     
         
 SelectedPlayer = MichaelsPlayer
-
