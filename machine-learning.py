@@ -16,6 +16,11 @@ class Candidate:
         self.Bumpiness = candidateDict['Bumpiness']
         self.Tetris = candidateDict['Tetris']
         self.RightMost = candidateDict['RightMost']
+        self.Gaps =  candidateDict['Gaps']
+        self.after8MaxCol = candidateDict['after8MaxCol']
+        self.after8CompletedLines = candidateDict['after8CompletedLines']
+        self.after8Bumpiness = candidateDict['after8Bumpiness']
+        self.after8Gaps = candidateDict['after8Gaps']
 
         self.Fitness = None
 
@@ -33,15 +38,20 @@ class Candidate:
         self.Bumpiness = self.mutateElement(self.Bumpiness, mutRate)
         self.Tetris = self.mutateElement(self.Tetris, mutRate)
         self.RightMost = self.mutateElement(self.RightMost, mutRate)
+        self.Gaps =  self.mutateElement(self.Gaps, mutRate)
+        self.after8MaxCol = self.mutateElement(self.after8MaxCol, mutRate)
+        self.after8CompletedLines =  self.mutateElement(self.after8CompletedLines, mutRate)
+        self.after8Bumpiness =  self.mutateElement(self.after8Bumpiness, mutRate)
+        self.after8Gaps =  self.mutateElement(self.after8Gaps, mutRate)
 
     def addFitness(self, fitnessScore):
         self.Fitness = fitnessScore
     
     def clone(self):
         return self
-
+        
     def __repr__(self):
-        return 'Candidate( Holes: '+ str(self.Holes) + ' AggrHeight: '+ str(self.AggrHeight) + ' CompletedLines: '+ str(self.CompletedLines) + ' Bumpiness: '+ str(self.Bumpiness) + ' Tetris: '+ str(self.Tetris) + ' RightMost: '+ str(self.RightMost)+' )'
+        return 'Candidate( Holes: '+ str(self.Holes) + ' AggrHeight: '+ str(self.AggrHeight) + ' CompletedLines: '+ str(self.CompletedLines) + ' Bumpiness: '+ str(self.Bumpiness) + ' Tetris: '+ str(self.Tetris) + ' RightMost: '+ str(self.RightMost)+' Gaps: '+ str(self.Gaps)+' after8MaxCol: '+str(self.after8MaxCol)+' after8CompletedLines: '+str(self.after8CompletedLines)+' after8Bumpiness: '+str(self.after8Bumpiness)+' after8Gaps: '+str(self.after8Gaps)+' )'
 class Population:
     def __init__(self):
         self.candidates = []
@@ -65,7 +75,7 @@ class Population:
     #It is passed an index of the candidate in the list, it returns a tuple containing (index, fitnessscore)
     def computeMProc(self, candidateIndex):
         totScore = 0
-        seeds = [3,7,23,42,76,92,99,123,200,324]
+        seeds = [23,32,38,42,100,101,123,150,223,250]
         for rnd in range(self.rounds):
             board = Board(BOARD_WIDTH, BOARD_HEIGHT)
             block_limit = 400
@@ -135,17 +145,25 @@ def generateRandomCandidate():
                     'CompletedLines' :-0.4,
                     'Bumpiness' : -0.01,
                     'Tetris' : 1000,
-                    'RightMost' : -0.4
-                }
+                    'RightMost' : -0.4,
+                    'Gaps': -0.2,
+                    'after8MaxCol':-1,
+                    'after8CompletedLines': 0.01,
+                    'after8Bumpiness':-0.15,
+                    'after8Gaps': -0.1
+                    }
+
     return randCandidate
 
     
 
 
 def startLearning():
-    popSize = 24
+    popSize = 16
     pop = Population()
-    for i in range(popSize):
+    c = Candidate(generateRandomCandidate())
+    pop.addCandidate(c)
+    for i in range(popSize-1):
         c = Candidate(generateRandomCandidate())
         c.mutate()
         pop.addCandidate(c)

@@ -10,6 +10,11 @@ onetothreeCoeff = 0
 bumpsCoeff= 0
 tetrisCoeff = 0
 rightMostCoeff = 0
+gapsCoeff = 0
+after8MaxColCoeff = 0
+after8OnetothreeCoeff = 0
+after8BumpsCoeff = 0
+after8GapsCoeff = 0 
 
 
 class Player:
@@ -141,6 +146,16 @@ def maxLineHeight(sandbox):
             maxHeight = hx
     return maxHeight
 
+def bigGaps(sandbox):
+    gaps = 0
+    for column in range(1, sandbox.width):
+        chLeft = columnHeight(sandbox, column-1)
+        chCurrentColumn = columnHeight(sandbox, column)
+        deltaH = chCurrentColumn - chLeft
+        if deltaH > 0:
+            gaps += deltaH
+    return gaps
+
 
 def evalBoard(sandbox):
     #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * completedLines(sandbox) -0.184483*hisBumpiness(sandbox)
@@ -155,16 +170,21 @@ def evalBoard(sandbox):
     bumps = hisBumpiness(sandbox)
     tetris = Tetris(sandbox, completedline)
     righMostLine = freeRightMostLine(sandbox)
-    #bigBlock = bigContinuousBlock(sandbox, holes, height)
+    bigBlock = bigContinuousBlock(sandbox, holes, height)
     maximumColumnHeight = maxLineHeight(sandbox)
+    gaps = bigGaps(sandbox)
 
 
 
-    if maximumColumnHeight >= 12:
-        return -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +tetris*100+0.760666 * realCompletedLines(sandbox) -0.184483*hisBumpiness(sandbox)
+    #Old coefficients Coefficients 
+
+    if maximumColumnHeight > 8 or holes >0:
+        return holeCoeff*holes +heightCoeff* height +after8OnetothreeCoeff* onetothreelines +after8BumpsCoeff*bumps +tetrisCoeff*tetris +rightMostCoeff* righMostLine + after8MaxColCoeff*maximumColumnHeight + after8GapsCoeff*gaps 
+        #return -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +tetris*100+0.760666 * realCompletedLines(sandbox) -0.184483*hisBumpiness(sandbox)
 
 
-    score = +holeCoeff*holes +heightCoeff* height +onetothreeCoeff* onetothreelines +bumpsCoeff*bumps +tetrisCoeff*tetris +rightMostCoeff* righMostLine #+ 0.99* bigBlock
+    score = +holeCoeff*holes +heightCoeff* height +onetothreeCoeff* onetothreelines +bumpsCoeff*bumps +tetrisCoeff*tetris +rightMostCoeff* righMostLine + gapsCoeff*gaps 
+
     
     return score
 
@@ -312,13 +332,18 @@ class MichaelsPlayer(Player):
     def __init__(self, candidate, seed=None):
         #Could initialise parameters from here?
         self.random = Random(seed)
-        global holeCoeff, heightCoeff, onetothreeCoeff, bumpsCoeff, tetrisCoeff, rightMostCoeff
+        global holeCoeff, heightCoeff, onetothreeCoeff, bumpsCoeff, tetrisCoeff, rightMostCoeff, gapsCoeff, after8MaxColCoeff, after8OnetothreeCoeff, after8BumpsCoeff, after8GapsCoeff
         holeCoeff = candidate.Holes
         heightCoeff = candidate.AggrHeight
         onetothreeCoeff = candidate.CompletedLines
         bumpsCoeff= candidate.Bumpiness
         tetrisCoeff = candidate.Tetris
         rightMostCoeff = candidate.RightMost
+        gapsCoeff = candidate.Gaps
+        after8MaxColCoeff = candidate.after8MaxCol
+        after8OnetothreeCoeff = candidate.after8CompletedLines
+        after8BumpsCoeff = candidate.after8Bumpiness
+        after8GapsCoeff = candidate.after8Gaps
 
     def choose_action(self, board):
         bestMove = chooseBestMove(board)[0]

@@ -4,30 +4,38 @@ from constants import BOARD_WIDTH, BOARD_HEIGHT, DEFAULT_SEED, INTERVAL, \
     BLOCK_LIMIT
 from exceptions import BlockLimitException
 from player import Player, SelectedPlayer
-import time
+import time, multiprocessing
 
-def run():
+
+
+def run(i):
     start = time.time()
     board = Board(BOARD_WIDTH, BOARD_HEIGHT)
 
-    adversary = RandomAdversary(DEFAULT_SEED, BLOCK_LIMIT)
+    adversary = RandomAdversary(42, 400)
 
     player = SelectedPlayer()
 
     try:
         for move in board.run(player, adversary):
-            i = board.score
+            p = board.score
     except BlockLimitException:
-        print("Out of blocks")
         pass     
     except:
         pass
     finally:
         end = time.time()
-        print("Score=", board.score)
-        print("Time=", end - start)
+        print("Time="+str(end-start)+" Score=", str(board.score))
+        #print("i="+str(i)+" Score=", str(board.score))
+        return board.score
+
+
 if __name__ == '__main__':
-
-    run()
-
+    run(41)
+    '''
+    p = multiprocessing.Pool(5)
+    score = p.map(run, list(range(30)))
+    print(score)
+    print("Avg="+str(sum(score)/len(score)))
+    '''
         

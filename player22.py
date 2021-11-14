@@ -4,8 +4,13 @@ from board import Shape
 
 import time
 
+holesCoeff = 0
+aggrHeightCoeff = 0
+compLinesCoeff = 0
+bumpCoeff = 0
+tetrisCoeff = 0
+rightMostCoeff = 0
 
-run = 0
 
 class Player:
     def choose_action(self, board):
@@ -15,7 +20,7 @@ class Player:
 
 class RandomPlayer(Player):
     def __init__(self, seed=None):
-        self.random = Random(1)
+        self.random = Random(seed)
 
     def choose_action(self, board):
         if self.random.random() > 0.97:
@@ -78,20 +83,16 @@ def columnHeight(sandbox, x):
 #Maybe allow one bump of 4 blocks 
 def hisBumpiness(sandbox):
     bumpy = 0
-    diff = 0
-    for x in range(sandbox.width-2):
-        diff = abs(columnHeight(sandbox, x)-columnHeight(sandbox, x+1))
-        bumpy += diff
-    if diff > 3:
-        bumpy *= 2
+    for x in range(sandbox.width-1):
+        bumpy += abs(columnHeight(sandbox, x)-columnHeight(sandbox, x+1))
     return bumpy
 
 
-def Tetris(sandbox, complines):
-    if complines >= 4:
+def Tetris(sandbox):
+    if realCompletedLines(sandbox) == 4:
         return 1 
-    return 0
-
+    return -1
+    
 
 
 def realCompletedLines(sandbox):
@@ -106,11 +107,13 @@ def realCompletedLines(sandbox):
             linesCompleted +=1
     return linesCompleted
 
-##Between 3 a
-def completedLines(sandbox, complines):
-    if complines < 4:
-        return complines
-    return 0 
+##If between zero and 3 lines are completed 
+def completedLines(sandbox):
+    lines = realCompletedLines(sandbox)
+    if lines > 0 and lines < 4:
+        return 4
+    else: 
+        return 0
 
 #Rightmost line should be free 
 def freeRightMostLine(sandbox):
@@ -119,73 +122,30 @@ def freeRightMostLine(sandbox):
         return 1
     else: 
         return 0
+
 def bigContinuousBlock(sandbox, holes, height):
     hol = holes
     if hol == 0 and height< 110:
         return 1
     return 0
 
-def maxLineHeight(sandbox):
-    maxHeight = 0
-    for x in range(sandbox.width):
-        hx = columnHeight(sandbox, x)
-        if hx > maxHeight:
-            maxHeight = hx
-    return maxHeight
-
-def bigGaps(sandbox):
-    gaps = 0
-    for column in range(1, sandbox.width):
-        chLeft = columnHeight(sandbox, column-1)
-        chCurrentColumn = columnHeight(sandbox, column)
-        deltaH = chCurrentColumn - chLeft
-        if deltaH > 0:
-            gaps += deltaH
-    return gaps
-
 
 def evalBoard(sandbox):
-    #Function results 
+    #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * completedLines(sandbox) -0.184483*hisBumpiness(sandbox)
+    #Penalise moves that cover up a hole on the edges without doing a tetris
+    #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * ((completedLines(sandbox)-2)**completedLines(sandbox)) -0.184483*hisBumpiness(sandbox)
+    #These heuristics have been taken from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
+    #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * ((completedLines(sandbox)-2)**completedLines(sandbox)) -0.184483*hisBumpiness(sandbox)
     holes = hisHolyness(sandbox)
     height = hisHighNess(sandbox)
-    completedline = realCompletedLines(sandbox)
-    onetothreelines = completedLines(sandbox, completedline)
+    onetothreelines = completedLines(sandbox)
     bumps = hisBumpiness(sandbox)
-    tetris = Tetris(sandbox, completedline)
+    tetris = Tetris(sandbox)
     righMostLine = freeRightMostLine(sandbox)
-    bigBlock = bigContinuousBlock(sandbox, holes, height)
-    maximumColumnHeight = maxLineHeight(sandbox)
-    gaps = bigGaps(sandbox)
 
-
-    #Tetris Coefficients 
-    holeCoeff = -4.6990053862143
-    heightCoeff = -0.010020904919172607
-    onetothreeCoeff = -0.41990427627156823
-    #Changed from -0.05
-    bumpsCoeff = -0.04504133163642255
-    tetrisCoeff = 1
-    rightMostCoeff = -0.4065829977599506
-    gapsCoeff =  -0.21552912460497728
-    maxColCoeff = 0
-    
-    #Old coefficients Coefficients 
-
-    if maximumColumnHeight > 8 or holes >0:
-        maxColCoeff = -1.0262112071979774
-        onetothreeCoeff = 0.009923071312800406
-        bumpsCoeff =  -0.13640197970762105
-        gapsCoeff = -0.09857410302264741
-        return -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +tetris*100+0.760666 * realCompletedLines(sandbox) -0.184483*hisBumpiness(sandbox)
-
-
-    score = +holeCoeff*holes +heightCoeff* height +onetothreeCoeff* onetothreelines +bumpsCoeff*bumps +tetrisCoeff*tetris +rightMostCoeff* righMostLine + maxColCoeff*maximumColumnHeight + gapsCoeff*gaps #+ 0.99* bigBlock
-
-    #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * ((completedLines(sandbox))*(4**(completedLines(sandbox)-1))) -0.184483*hisBumpiness(sandbox) 
-    #print(score)
+    score = holesCoeff*holes + aggrHeightCoeff * height + compLinesCoeff * onetothreelines + bumps *hisBumpiness(sandbox) + tetris * Tetris(sandbox) + rightMostCoeff*righMostLine
     
     return score
-
 
 
 def moveHorizontally(sandbox, previousMoves, direction, shifts):
@@ -290,12 +250,7 @@ def chooseBestMove(sandbox_original):
     bestAction = []
     
     if sandbox_original.falling is not None:
-        rots = 4
-        if sandbox_original.falling.shape == Shape.O:
-            rots = 1
-        if sandbox_original.falling.shape == Shape.I:
-            rots = 2
-        for rotation in range(0,rots):
+        for rotation in range(0,4):
             sandbox = sandbox_original.clone()
             if sandbox.falling is not None:
                 actions = []
@@ -328,20 +283,23 @@ def chooseBestMove(sandbox_original):
 
 
 class MichaelsPlayer(Player):
-    def __init__(self, seed=None):
+    def __init__(self, candidate, seed=None):
         #Could initialise parameters from here?
         self.random = Random(seed)
-        self.test = True 
-        self.testtwo = False
-        
-    def choose_action(self, board):
-        
-        bestMove = chooseBestMove(board)[0]
+        global holesCoeff, aggrHeightCoeff, compLinesCoeff, bumpCoeff, tetrisCoeff, rightMostCoeff
+        holesCoeff = candidate.Holes
+        aggrHeightCoeff = candidate.AggrHeight
+        compLinesCoeff = candidate.CompletedLines
+        bumpCoeff = candidate.Bumpiness
+        tetrisCoeff = candidate.Tetris
+        rightMostCoeff = candidate.RightMost
 
+    def choose_action(self, board):
+        bestMove = chooseBestMove(board)[0]
+        print('heee')
         return bestMove
         
 
     
         
 SelectedPlayer = MichaelsPlayer
-

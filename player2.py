@@ -133,6 +133,17 @@ def maxLineHeight(sandbox):
             maxHeight = hx
     return maxHeight
 
+def bigGaps(sandbox):
+    gaps = 0
+    for column in range(1, sandbox.width):
+        chLeft = columnHeight(sandbox, column-1)
+        chCurrentColumn = columnHeight(sandbox, column)
+        deltaH = chCurrentColumn - chLeft
+        if deltaH > 0:
+            gaps += deltaH
+    return gaps
+
+
 def evalBoard(sandbox):
     #Function results 
     holes = hisHolyness(sandbox)
@@ -144,56 +155,31 @@ def evalBoard(sandbox):
     righMostLine = freeRightMostLine(sandbox)
     bigBlock = bigContinuousBlock(sandbox, holes, height)
     maximumColumnHeight = maxLineHeight(sandbox)
-
+    gaps = bigGaps(sandbox)
 
 
     #Tetris Coefficients 
     holeCoeff = -4.9
-    heightCoeff = -0.001
+    heightCoeff = -0.01
     onetothreeCoeff = -0.4
-    bumpsCoeff = -0.01
-    tetrisCoeff = 1000
-    rightMost = -0.4
-
-
+    #Changed from -0.05
+    bumpsCoeff = -0.05
+    tetrisCoeff = 1
+    rightMostCoeff = -0.4
+    gapsCoeff = -0.2
+    maxColCoeff = 0
     
     #Old coefficients Coefficients 
 
-    if maximumColumnHeight >= 12:
-        return -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +tetris*100+0.760666 * realCompletedLines(sandbox) -0.184483*hisBumpiness(sandbox)
+    if maximumColumnHeight > 8 or holes >0:
+        maxColCoeff = -1
+        onetothreeCoeff = 0
+        bumpsCoeff = -0.15
+        gapsCoeff = -0.2
+        #return -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +tetris*100+0.760666 * realCompletedLines(sandbox) -0.184483*hisBumpiness(sandbox)
 
 
-
-    score = +holeCoeff*holes +heightCoeff* height +onetothreeCoeff* onetothreelines +bumpsCoeff*bumps +tetrisCoeff*tetris +rightMost* righMostLine #+ 0.99* bigBlock
-#    score = -10.017716*holes -0.60438914* height -20.0983829* onetothreelines -0.0250138*bumps +80.484989*tetris -8.97809041*righMostLine + 0.99* bigBlock
-    '''
-    score = +holeCoeff*holes +heightCoeff* height +onetothreeCoeff* onetothreelines +bumpsCoeff*bumps +tetrisCoeff*tetris +rightMost* righMostLine #+ 0.99* bigBlock
-    
-    #Tetris Coefficients 
-    holeCoeff = -100
-    heightCoeff = -0.5
-    onetothreeCoeff = -20000
-    bumpsCoeff = -5
-    tetrisCoeff = 150
-    rightMost = -100
-    
-    score = holeCoeff*holes +heightCoeff* height +onetothreeCoeff* onetothreelines +bumpsCoeff*bumps +tetrisCoeff*tetris +rightMost* righMostLine #+ 0.99* bigBlock
-    '''
-    #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * realCompletedLines(sandbox) -0.184483*hisBumpiness(sandbox)
-    #score =  -0.47809041*freeRightMostLine(sandbox)
-    #Penalise moves that cover up a hole on the edges without doing a tetris
-    ##These heuristics have been taken from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
-   # score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * ((completedLines(sandbox)-2)**completedLines(sandbox)) -0.184483*hisBumpiness(sandbox)
-    
-    ''' 20.000 score''' 
-    '''
-    completed = completedLines(sandbox)
-    if completed >= 4:
-        completed = 1000
-    else:
-        completed = 0
-    score = -2*hisHolyness(sandbox) - 0.2* hisHighNess(sandbox) +1.3 * completed -0.18*hisBumpiness(sandbox)
-    '''
+    score = +holeCoeff*holes +heightCoeff* height +onetothreeCoeff* onetothreelines +bumpsCoeff*bumps +tetrisCoeff*tetris +rightMostCoeff* righMostLine + maxColCoeff*maximumColumnHeight + gapsCoeff*gaps #+ 0.99* bigBlock
 
     #score = -0.35663*hisHolyness(sandbox) - 0.510066* hisHighNess(sandbox) +0.760666 * ((completedLines(sandbox))*(4**(completedLines(sandbox)-1))) -0.184483*hisBumpiness(sandbox) 
     #print(score)
@@ -345,7 +331,6 @@ class MichaelsPlayer(Player):
     def __init__(self, seed=None):
         #Could initialise parameters from here?
         self.random = Random(seed)
-        self.iterToTest = 5
         self.test = True 
         self.testtwo = False
         
