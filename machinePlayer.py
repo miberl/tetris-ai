@@ -194,7 +194,7 @@ def evalBoard(sandbox):
     maximumColumnHeight = maxLineHeight(sandbox)
     gaps = bigGaps(sandbox)
 
-    # Old coefficients Coefficients
+    # Old Coefficients
     if maximumColumnHeight > 13 or holes > 0:
         return holeCoeff*holes + after8OnetothreeCoeff * onetothreelines + after8BumpsCoeff*bumps + tetrisCoeff*tetris + after8AggrHeight*height+rightMostCoeff * righMostLine + after8MaxColCoeff*maximumColumnHeight + after8GapsCoeff*gaps
 
@@ -203,32 +203,6 @@ def evalBoard(sandbox):
         rightMostCoeff * righMostLine + gapsCoeff*gaps
 
     return score
-    '''
-    holeCoeff = -9.142298868973754
-    heightCoeff = -0.0009361130217256599
-    onetothreeCoeff = -2.50238321925705955
-    # Changed from -0.05
-    bumpsCoeff = -0.05
-    tetrisCoeff = 102.45373845404774
-    rightMostCoeff = -0.40264836811111115
-    gapsCoeff = -0.527280443244512
-    maxColCoeff = 0
-
-   # Old coefficients Coefficients
-
-    if maximumColumnHeight > 13 or holes > 0:
-        maxColCoeff = -1.046404648857806
-        heightCoeff = -0.009755359766674137
-        onetothreeCoeff = 0.0009443446375252447
-        bumpsCoeff = -0.13783132835025366
-        gapsCoeff = -0.20168757364913825
-
-    score = +holeCoeff*holes + heightCoeff * height + onetothreeCoeff * onetothreelines + bumpsCoeff*bumps + tetrisCoeff * \
-        tetris + rightMostCoeff * righMostLine + maxColCoeff * \
-        maximumColumnHeight + gapsCoeff*gaps  # + 0.99* bigBlock
-
-    return score
-    '''
 
 
 def moveHorizontally(sandbox, previousMoves, direction, shifts):
