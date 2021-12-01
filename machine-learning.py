@@ -152,11 +152,9 @@ def percentageDelta(value):
 
 # this could be an initial element of population
 def generateRandomCandidate():
-    # Generating random values between -0.5 and 0.5 for each characteristic
+    # Not truly random, starting from previous, well-performing weights
 
-    # Not truly random, starting from known heuristics
-
-    randCandidate = {'Holes': -10.425848148861757,
+    goodCandidate = {'Holes': -10.425848148861757,
                      'AggrHeight': -0.0009293794396322049,
                      'CompletedLines': -2.5023832192570596,
                      'Bumpiness': -0.04355179063623546,
@@ -170,7 +168,7 @@ def generateRandomCandidate():
                      'after8Gaps': -0.20168757364913825
                      }
 
-    return randCandidate
+    return goodCandidate
 
 
 def startLearning():
