@@ -35,10 +35,22 @@ class RandomPlayer(Player):
                 Rotation.Anticlockwise,
                 Rotation.Clockwise,
             ])
+# Board.falling -> contains information about the currently falling block
+# its shape (board.falling.shape) and the coordinates of its cells (board.falling.cells).
+# The shape is an instance of the enum shape, whose definition can be found in board.py.
 
 
-# Returns a board's number of holes
-def hisHolyness(sandbox):
+# Heuristics
+# Bumpiness
+# Holes
+# Completed lines
+# Aggregate height
+
+# this should return the final board position, with the list of moves it took to accomplish it
+
+
+# Returns a score for a board
+def findHoles(sandbox):
     holes = 0
     for y in range(sandbox.height):
         for x in range(sandbox.width):
@@ -50,7 +62,7 @@ def hisHolyness(sandbox):
     return holes
 
 
-def hisHighNess(sandbox):
+def findHeight(sandbox):
     highness = 0
     for x in range(sandbox.width):
         highness += columnHeight(sandbox, x)
@@ -66,8 +78,8 @@ def columnHeight(sandbox, x):
     return height
 
 
-# Maybe allow one bump of 4 blocks?
-def hisBumpiness(sandbox):
+# Maybe allow one bump of 4 blocks
+def findBumps(sandbox):
     bumpy = 0
     diff = 0
     for x in range(sandbox.width-2):
@@ -88,6 +100,14 @@ def Tetris(sandbox, complines):
     else:
         return 0
 
+    '''
+    if complines >= 1:
+        # if complines >= 4:
+        assert(False)
+        return 1
+    return 0
+    '''
+
 
 def realCompletedLines(sandbox):
 
@@ -100,11 +120,24 @@ def realCompletedLines(sandbox):
         return 3
     elif diffScore >= 100:
         return 2
-    # Must account for dropping score as well...
     elif diffScore >= 42:
         return 1
     else:
         return 0
+    '''
+        for y in range(sandbox.height):
+        allComplete = True
+        for x in range(sandbox.width):
+            if (x, y) not in sandbox.cells:
+                allComplete = False
+                break
+        if allComplete:
+            linesCompleted += 1
+    return linesCompleted
+    '''
+
+
+# Between 3 a
 
 
 def completedLines(sandbox, complines):
@@ -112,7 +145,7 @@ def completedLines(sandbox, complines):
         return complines
     return 0
 
-# Rightmost line should be free -> want to slot an I block
+# Rightmost line should be free
 
 
 def freeRightMostLine(sandbox):
@@ -150,53 +183,37 @@ def bigGaps(sandbox):
 
 
 def evalBoard(sandbox):
-    global run
-
     # Function results
-    holes = hisHolyness(sandbox)
-    height = hisHighNess(sandbox)
+    holes = findHoles(sandbox)
+    height = findHeight(sandbox)
     completedline = realCompletedLines(sandbox)
     onetothreelines = completedLines(sandbox, completedline)
-    bumps = hisBumpiness(sandbox)
+    bumps = findBumps(sandbox)
     tetris = Tetris(sandbox, completedline)
     righMostLine = freeRightMostLine(sandbox)
-    bigBlock = bigContinuousBlock(sandbox, holes, height)
     maximumColumnHeight = maxLineHeight(sandbox)
     gaps = bigGaps(sandbox)
 
  # Tetris Coefficients
-    if run == 1:
-        holeCoeff = -9.142298868973754
-        heightCoeff = -0.0009361130217256599
-        onetothreeCoeff = -2.50238321925705955
-        bumpsCoeff = -0.05
-        tetrisCoeff = 102.45373845404774
-        rightMostCoeff = -0.40264836811111115
-        gapsCoeff = -0.527280443244512
-        maxColCoeff = 0
+    holeCoeff = -10.425848148861757
+    heightCoeff = -0.0009293794396322049
+    onetothreeCoeff = -2.5023832192570596
+    # Changed from -0.05
+    bumpsCoeff = -0.04355179063623546
+    tetrisCoeff = 102.45373845404774
+    rightMostCoeff = -0.45308411439364954
+    gapsCoeff = -0.527280443244512
+    maxColCoeff = 0
 
-        if maximumColumnHeight > 12 or holes > 0:
-            maxColCoeff = -1.046404648857806
-            heightCoeff = -0.009755359766674137
-            onetothreeCoeff = 0.0009443446375252447
-            bumpsCoeff = -0.13783132835025366
-            gapsCoeff = -0.20168757364913825
-    else:
-        holeCoeff = -10.425848148861757
-        heightCoeff = -0.0009293794396322049
-        onetothreeCoeff = -2.5023832192570596
-        bumpsCoeff = -0.04355179063623546
-        tetrisCoeff = 102.45373845404774
-        rightMostCoeff = -0.45308411439364954
-        gapsCoeff = -0.527280443244512
-        maxColCoeff = 0
+    # Old coefficients Coefficients
 
-        if maximumColumnHeight > 13 or holes > 0:
-            maxColCoeff = -1.2818902163686863
-            heightCoeff = -0.008003913016549473
-            onetothreeCoeff = 0.0012453808091311908
-            bumpsCoeff = -0.1088077254081058
-            gapsCoeff = -0.20168757364913825
+    if maximumColumnHeight > 13 or holes > 0:
+        maxColCoeff = -1.2818902163686863
+        heightCoeff = -0.008003913016549473
+        onetothreeCoeff = 0.0012453808091311908
+        bumpsCoeff = -0.1088077254081058
+        gapsCoeff = -0.20168757364913825
+
     score = +holeCoeff*holes + heightCoeff * height + onetothreeCoeff * onetothreelines + bumpsCoeff*bumps + tetrisCoeff * \
         tetris + rightMostCoeff * righMostLine + maxColCoeff * \
         maximumColumnHeight + gapsCoeff*gaps
@@ -259,8 +276,7 @@ def findHorizontalMoves(sandbox, previousMoves):
                 bestAction = moves.copy()
                 bestScore = newSandboxScore
                 bestSandbox = movedSandbox
-
-        # Neither right or left, just drop centrally
+        # Neither right or lef, just drop centrally
         moves = previousMoves.copy()
         movedSandbox = sandbox.clone()
         newSandboxScore = 0
@@ -349,27 +365,28 @@ def chooseBestMove(sandbox_original):
     return bestAction, bestScore, bestSandbox
 
 
+def dropBomb(sandbox, position):
+    tempsand = sandbox.clone()
+
+
 class MichaelsPlayer(Player):
     def __init__(self, seed=None):
+        # Could initialise parameters from here?
         self.random = Random(seed)
         self.test = True
+        self.testtwo = False
+        self.iterToTest = 1
 
     def choose_action(self, board):
-        global lastHoles, lastScore, discards, run
-
-        if self.test:
-            if board.falling.shape == Shape.J and board.next.shape == Shape.Z:
-                run = 1
-            else:
-                run = 2
-            self.test = False
-
-        lastHoles = hisHolyness(board)
+        global lastHoles, lastScore, discards
+        lastHoles = findHoles(board)
         lastScore = board.score
+
+        bombedBoard = board.clone()
 
         bestMove = chooseBestMove(board)
 
-        newHoles = hisHolyness(bestMove[2])
+        newHoles = findHoles(bestMove[2])
 
         if (newHoles > 0 and discards < 10):
             discards += 1
